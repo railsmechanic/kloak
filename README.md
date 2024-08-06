@@ -20,7 +20,7 @@ Using `Kloak` with a `Phoenix` application is quite easy. To perform authenticat
 def login(conn, _) do
   with {:ok, client} <- Kloak.Client.new(),
        {:ok, nonce} <- generate_nonce(),
-       {:ok, redirect_url} <- Kloak.authorization_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
+       {:ok, redirect_url} <- Kloak.authorize_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
     conn
     |> put_oidc_state(nonce)
     |> redirect(external: redirect_url)
