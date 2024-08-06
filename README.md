@@ -7,7 +7,7 @@ The package can be installed by adding `kloak` to your list of dependencies in `
 ```elixir
 def deps do
   [
-    {:kloak, "~> 0.2.0"}
+    {:kloak, "~> 0.2.1"}
   ]
 end
 ```

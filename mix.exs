@@ -4,7 +4,7 @@ defmodule Kloak.MixProject do
   def project do
     [
       app: :kloak,
-      version: "0.2.0",
+      version: "0.2.1",
       elixir: "~> 1.15",
       name: "kloak",
       source_url: "https://github.com/railsmechanic/kloak",
