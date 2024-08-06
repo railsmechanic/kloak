@@ -127,6 +127,21 @@ defmodule Kloak do
   end
 
   @doc """
+  Delete the OpenID Connect state from the session of the current user.
+
+  ## Examples
+      iex> delete_oidc_state(%Plug.Conn{})
+      %Plug.Conn{...}
+
+      iex> delete_oidc_state(%Plug.Conn{}, :extra_oidc_state_key)
+      %Plug.Conn{...}
+  """
+  @spec delete_oidc_state(conn :: Plug.Conn.t(), oidc_state_key :: atom()) :: Plug.Conn.t()
+  def delete_oidc_state(%Plug.Conn{} = conn, oidc_state_key \\ @default_oidc_state_key) when is_atom(oidc_state_key) do
+    Plug.Conn.delete_session(conn, oidc_state_key)
+  end
+
+  @doc """
   Verify the OpenID Connect state from the redirect with the state stored in the session of the current user.
 
   ## Examples
