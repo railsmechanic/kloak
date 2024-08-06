@@ -26,8 +26,9 @@ defmodule Kloak.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:oauth2, "~> 2.1.0"},
+      {:b58, "~> 1.0.3"},
       {:jason, "~> 1.4.3"},
+      {:oauth2, "~> 2.1.0"},
       {:ex_doc, "~> 0.34.1", only: :dev, runtime: false},
       {:earmark, "~> 1.4.46", only: [:dev]}
     ]

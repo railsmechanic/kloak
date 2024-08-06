@@ -7,8 +7,9 @@ defmodule Kloak do
   #### Phoenix controller
       @doc "Login controller action which redirects to Keycloak for authentication."
       def login(conn, _) do
-        with {:ok, client} <- Kloak.Client.new(), {:ok, nonce} <- generate_nonce(),
-             {:ok, redirect_url} <- Kloak.authorization_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
+        with {:ok, client} <- Kloak.Client.new(),
+             {:ok, nonce} <- generate_nonce(),
+             {:ok, redirect_url} <- Kloak.authorize_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
           conn
           |> put_oidc_state(nonce)
           |> redirect(external: redirect_url)
@@ -33,6 +34,12 @@ defmodule Kloak do
         end
       end
   """
+
+  ## -- Module attributes
+  # - Default nonce size
+  @default_nonce_size 32
+
+  ## -- Authentication functions
 
   @doc """
   Fetches the user information of the authenticated user from the Keycloak userinfo endpoint.
@@ -99,4 +106,62 @@ defmodule Kloak do
         {:error, "Getting the access token from Keycloak failed"}
     end
   end
+
+  ## -- Utility functions
+  @doc """
+  Generate a unique, secure random nonce of the given size.
+
+  ## Examples
+      iex> generate_nonce()
+      {:ok, "aas7d8ads8789asd7981aas7d8ads87d"}
+
+      iex> generate_nonce(8)
+      {:ok, "aas7d8ad"}
+
+      iex> generate_nonce(8)
+      {:error, "Generating nonce failed with an invalid result"}
+
+      iex> generate_nonce(nil)
+      {:error, "Generating nonce failed due to an invalid given size"}
+  """
+  @spec generate_nonce(non_neg_integer()) :: {:ok, binary()} | {:error, binary()}
+  def generate_nonce(size \\ @default_nonce_size)
+
+  def generate_nonce(size) when is_integer(size) and size > 0 do
+    case nonce_generator(size) do
+      nonce when is_binary(nonce) and byte_size(nonce) == size ->
+        {:ok, nonce}
+
+      _invalid_nonce ->
+        {:error, "Generating nonce failed with an invalid result"}
+    end
+  end
+
+  def generate_nonce(_size) do
+    {:error, "Generating nonce failed due to an invalid given size"}
+  end
+
+  # - Performs the nonce generation of the given size.
+  @spec nonce_generator(non_neg_integer(), binary()) :: binary()
+  defp nonce_generator(size, acc \\ "")
+
+  defp nonce_generator(size, acc) when is_integer(size) and size > 0 and is_binary(acc) and byte_size(acc) >= size,
+    do: String.slice(acc, 0, size)
+
+  defp nonce_generator(size, acc) when is_integer(size) and size > 0 and is_binary(acc) and byte_size(acc) < size,
+    do: nonce_generator(size, String.trim(acc <> do_generate_random_token(size)))
+
+  defp nonce_generator(size, _acc) when is_integer(size) and size > 0,
+    do: nonce_generator(size, "")
+
+  # - Generate a random Base58 encoded token.
+  @spec do_generate_random_token(non_neg_integer()) :: binary()
+  defp do_generate_random_token(size) when is_integer(size) and size > 0 do
+    size
+    |> :crypto.strong_rand_bytes()
+    |> Base58.encode()
+  end
+
+  defp do_generate_random_token(_invalid_size),
+    do: do_generate_random_token(@default_nonce_size)
 end
