@@ -22,7 +22,7 @@ def login(conn, _) do
        {:ok, nonce} <- generate_nonce(),
        {:ok, redirect_url} <- Kloak.authorize_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
     conn
-    |> put_oidc_state(nonce)
+    |> Kloak.put_oidc_state(nonce)
     |> redirect(external: redirect_url)
   end
 end
@@ -31,7 +31,7 @@ end
 ```elixir
 @doc "Callback controller action which is called when a users is redirected from Keycloak."
 def callback(conn, %{"code" => code, "state" => state}) do
-  with {:ok, true} <- verify_oidc_state(conn, state),
+  with {:ok, true} <- Kloak.verify_oidc_state(conn, state),
        {:ok, client} <- Kloak.Client.new(),
        {:ok, token} <- Kloak.get_token(client, code: code, redirect_uri: url(~p"/auth/callback")),
        {:ok, client} <- Kloak.Client.new(token: token),

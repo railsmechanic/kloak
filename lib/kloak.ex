@@ -8,21 +8,21 @@ defmodule Kloak do
       @doc "Login controller action which redirects to Keycloak for authentication."
       def login(conn, _) do
         with {:ok, client} <- Kloak.Client.new(),
-             {:ok, nonce} <- generate_nonce(),
+             {:ok, nonce} <- Kloak.generate_nonce(),
              {:ok, redirect_url} <- Kloak.authorize_url(client, scope: "openid", state: nonce, redirect_uri: url(~p"/auth/callback")) do
           conn
-          |> put_oidc_state(nonce)
+          |> Kloak.put_oidc_state(nonce)
           |> redirect(external: redirect_url)
         end
       end
 
       @doc "Callback controller action which is called when a users is redirected from Keycloak."
       def callback(conn, %{"code" => code, "state" => state}) do
-        with {:ok, true} <- verify_oidc_state(conn, state),
-            {:ok, client} <- Kloak.Client.new(),
-            {:ok, token} <- Kloak.get_token(client, code: code, redirect_uri: url(~p"/auth/callback")),
-            {:ok, client} <- Kloak.Client.new(token: token),
-            {:ok, user_information} <- Kloak.user_information(client) do
+        with {:ok, true} <- Kloak.verify_oidc_state(conn, state),
+             {:ok, client} <- Kloak.Client.new(),
+             {:ok, token} <- Kloak.get_token(client, code: code, redirect_uri: url(~p"/auth/callback")),
+             {:ok, client} <- Kloak.Client.new(token: token),
+             {:ok, user_information} <- Kloak.user_information(client) do
           # Do something with the user information
           IO.inspect(user_information)
 
@@ -38,6 +38,9 @@ defmodule Kloak do
   ## -- Module attributes
   # - Default nonce size
   @default_nonce_size 32
+  #
+  # - Default OIDC state key
+  @default_oidc_state_key :oidc_state
 
   ## -- Authentication functions
 
@@ -105,6 +108,55 @@ defmodule Kloak do
       _getting_token_failed ->
         {:error, "Getting the access token from Keycloak failed"}
     end
+  end
+
+  ## -- OpenID Connect helper functions
+  @doc """
+  Put the OpenID Connect state into the session in order to be able to verify that an authentication is requested by the actual user.
+
+  ## Examples
+      iex> put_oidc_state(%Plug.Conn{}, "somestate")
+      %Plug.Conn{...}
+
+      iex> put_oidc_state(%Plug.Conn{}, "somestate", :extra_oidc_state_key)
+      %Plug.Conn{...}
+  """
+  @spec put_oidc_state(conn :: Plug.Conn.t(), oidc_state :: binary(), oidc_state_key :: atom()) :: Plug.Conn.t()
+  def put_oidc_state(%Plug.Conn{} = conn, oidc_state, oidc_state_key \\ @default_oidc_state_key) when is_binary(oidc_state) and byte_size(oidc_state) > 0 and is_atom(oidc_state_key) do
+    Plug.Conn.put_session(conn, oidc_state_key, oidc_state)
+  end
+
+  @doc """
+  Verify the OpenID Connect state from the redirect with the state stored in the session of the current user.
+
+  ## Examples
+      iex> verify_oidc_state(%Plug.Conn{}, "statefromredirection")
+      {:ok, true}
+
+      iex> verify_oidc_state(%Plug.Conn{}, "invalidstatefromredirection")
+      {:ok, false}
+
+      iex> verify_oidc_state(%Plug.Conn{}, "somestate", :extra_oidc_state_key)
+      {:error, "Unable to retrieve OIDC state from session"}
+
+      iex> verify_oidc_state(%Plug.Conn{}, nil, nil)
+      {:error, "Unable to verify invalid OIDC state with invalid attributes"}
+  """
+  @spec verify_oidc_state(conn :: Plug.Conn.t(), oidc_state :: binary(), oidc_state_key :: atom()) :: {:ok, boolean()} | {:error, binary()}
+  def verify_oidc_state(conn, oidc_state, oidc_state_key \\ @default_oidc_state_key)
+
+  def verify_oidc_state(%Plug.Conn{} = conn, oidc_state, oidc_state_key) when is_binary(oidc_state) and byte_size(oidc_state) > 0 and is_atom(oidc_state_key) do
+    case Plug.Conn.get_session(conn, oidc_state_key, :error) do
+      session_state when is_binary(session_state) and byte_size(session_state) > 0 ->
+        {:ok, String.equivalent?(oidc_state, session_state)}
+
+      _invalid_session_state ->
+        {:error, "Unable to retrieve OIDC state from session"}
+    end
+  end
+
+  def verify_oidc_state(%Plug.Conn{}, _oidc_state, _oidc_state_key) do
+    {:error, "Unable to verify invalid OIDC state with invalid attributes"}
   end
 
   ## -- Utility functions
