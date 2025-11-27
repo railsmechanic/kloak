@@ -90,6 +90,40 @@ defmodule Kloak do
   end
 
   @doc """
+  Build the autorization URL, which is required in the authentication flow.
+  This built URL is used for redirecting to Keycloak.
+
+  ## Examples
+      iex> logout_url(%OAuth2.Client{...}, post_redirect_url: "https://...")
+      {:ok, "https://idm.example.com/.../logout?client_id=my-client&post_redirect_url=https://..."}
+
+      iex> logout_url(%OAuth2.Client{...})
+      {:ok, "https://idm.example.com/.../logout?client_id=my-client"}
+
+      iex> logout_url(%OAuth2.Client{...})
+      {:error, "Building the logout URL failed due to invalid parameters"}
+
+      iex> logout_url(%OAuth2.Client{...})
+      {:error, "Building the logout URL failed with an unknown error"}
+  """
+  @spec logout_url(OAuth2.Client.t(), keyword()) :: {:ok, binary()} | {:error, binary()}
+  def logout_url(%OAuth2.Client{} = client, params \\ []) when is_list(params) do
+    with {:ok, site} when is_binary(site) and byte_size(site) > 0 <- {:ok, client.site},
+         {:ok, client_id} when is_binary(client_id) and byte_size(client_id) > 0 <- {:ok, client.client_id},
+         {:ok, authorize_url} when is_binary(authorize_url) and byte_size(authorize_url) > 0 <- {:ok, client.authorize_url},
+         {:ok, base_logout_uri} <- URI.new(site <> String.replace(authorize_url, "openid-connect/auth", "openid-connect/logout")),
+         {:ok, complete_logout_uri} <- {:ok, URI.append_query(base_logout_uri, URI.encode_query([{:client_id, client_id} | params]))} do
+      {:ok, URI.to_string(complete_logout_uri)}
+    else
+      _invalid_parameters ->
+        {:error, "Building the logout URL failed due to invalid parameters"}
+    end
+  rescue
+    _unknown_error ->
+      {:error, "Building the logout URL failed with an unknown error"}
+  end
+
+  @doc """
   Try to get the access token from Keycloak with the given, preconfigured `OAuth2.Client`.
 
   ## Examples
