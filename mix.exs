@@ -4,7 +4,7 @@ defmodule Kloak.MixProject do
   def project do
     [
       app: :kloak,
-      version: "0.2.1",
+      version: "0.3.0",
       elixir: "~> 1.15",
       name: "kloak",
       source_url: "https://github.com/railsmechanic/kloak",
@@ -30,8 +30,8 @@ defmodule Kloak.MixProject do
       {:b58, "~> 1.0.3"},
       {:jason, "~> 1.4.3"},
       {:oauth2, "~> 2.1.0"},
-      {:ex_doc, "~> 0.34.1", only: :dev, runtime: false},
-      {:earmark, "~> 1.4.46", only: [:dev]}
+      {:ex_doc, "~> 0.34.2", only: :dev, runtime: false},
+      {:earmark, "~> 1.4.48", only: [:dev]}
     ]
   end
 
