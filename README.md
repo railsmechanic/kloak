@@ -7,7 +7,7 @@ The package can be installed by adding `kloak` to your list of dependencies in `
 ```elixir
 def deps do
   [
-    {:kloak, "~> 0.2.1"}
+    {:kloak, "~> 0.3.0"}
   ]
 end
 ```
@@ -50,4 +50,3 @@ end
 
 ## License
 The MIT License (MIT). Please see [LICENSE](LICENSE) for more information.
-
